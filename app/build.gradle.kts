@@ -1,3 +1,5 @@
+import com.google.devtools.ksp.gradle.KspTaskJvm
+
 plugins {
     id("idea")
     id("com.android.application")
@@ -39,8 +41,6 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
 
-            buildConfigField("String", "API_BASE_URL", "\"https://dailycost.my.id/\"")
-
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -56,8 +56,6 @@ android {
         debug {
             isMinifyEnabled = false
             isDebuggable = true
-
-            buildConfigField("String", "API_BASE_URL", "\"https://dailycost.my.id/\"")
 
             kotlinOptions {
                 freeCompilerArgs += listOf(
@@ -80,11 +78,24 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.8"
+        kotlinCompilerExtensionVersion = "1.5.2"
     }
     packaging {
         resources {
             excludes.add("/META-INF/{AL2.0,LGPL2.1}")
+        }
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        // https://github.com/square/wire/issues/2335
+        val buildType = variant.buildType.toString()
+        val flavor = variant.flavorName.toString()
+        tasks.withType<KspTaskJvm> {
+            if (name.contains(buildType, ignoreCase = true) && name.contains(flavor, ignoreCase = true)) {
+                dependsOn("generate${flavor.capitalize()}${buildType.capitalize()}Protos")
+            }
         }
     }
 }
@@ -97,25 +108,28 @@ wire {
 
 dependencies {
 
-    val kotlin_version by extra("1.8.22")
-    val compose_version by extra("1.5.0-beta03")
-    val lifecycle_version by extra("2.6.1")
-    val accompanist_version by extra("0.31.4-beta")
+    val kotlin_version by extra("1.9.0")
+    val compose_version by extra("1.5.0")
+    val lifecycle_version by extra("2.6.2")
+    val accompanist_version by extra("0.32.0")
 
-//    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
-
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
+    kapt ("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.6.0")
 
-    implementation("androidx.core:core-ktx:1.10.1")
+    implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.activity:activity-compose:1.7.2")
-    implementation("androidx.compose.runtime:runtime:1.4.3")
+    implementation("androidx.compose.runtime:runtime:1.5.1")
     implementation("androidx.compose.runtime:runtime-livedata:${extra["compose_version"]}")
-    implementation("androidx.navigation:navigation-compose:2.6.0")
-    implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
+    implementation("androidx.navigation:navigation-compose:2.7.2")
+    implementation("androidx.hilt:hilt-navigation-compose:1.1.0-alpha01")
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
     // Work Manager
-    implementation("androidx.hilt:hilt-work:1.0.0")
+    implementation("androidx.hilt:hilt-work:1.1.0-alpha01")
+    implementation("androidx.work:work-runtime:2.8.1")
     implementation("androidx.work:work-runtime-ktx:2.8.1")
     implementation("androidx.work:work-multiprocess:2.8.1")
 
@@ -134,21 +148,20 @@ dependencies {
     implementation("androidx.compose.animation:animation-android:${extra["compose_version"]}")
 
     // Constraint layout
-    implementation("androidx.constraintlayout:constraintlayout-compose:1.1.0-alpha10")
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.1.0-alpha12")
 
     // Biometric
     implementation("androidx.biometric:biometric-ktx:1.2.0-alpha05")
 
     // Material Design
     implementation("com.google.android.material:material:1.9.0")
-    implementation("androidx.compose.material:material:1.4.3")
-    implementation("androidx.compose.material:material-icons-extended:1.4.3")
-    implementation("androidx.compose.material3:material3-android:1.2.0-alpha03")
+    implementation("androidx.compose.material:material:1.5.1")
+    implementation("androidx.compose.material:material-icons-extended:1.5.1")
+    implementation("androidx.compose.material3:material3-android:1.2.0-alpha07")
     implementation("androidx.compose.material3:material3-window-size-class:1.1.1")
 
     // Large screen support
-//    implementation("androidx.window:window:1.1.0")
-//    implementation("androidx.window:window-java:1.1.0")
+    implementation("androidx.window:window:1.1.0")
 
     // Datastore
     implementation("androidx.datastore:datastore:1.0.0")
@@ -163,15 +176,16 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:${extra["lifecycle_version"]}")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:${extra["lifecycle_version"]}")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:${extra["lifecycle_version"]}")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:${extra["lifecycle_version"]}")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:${extra["lifecycle_version"]}")
     implementation("androidx.lifecycle:lifecycle-extensions:2.2.0")
-    implementation("androidx.core:core-ktx:1.10.1")
     kapt("androidx.lifecycle:lifecycle-common-java8:${extra["lifecycle_version"]}")
 
     // Dependency Injection
-    implementation("com.google.dagger:hilt-android:2.44.2")
-    kapt("androidx.hilt:hilt-compiler:1.0.0")
-    kapt("com.google.dagger:hilt-compiler:2.44.2")
-    kapt("com.google.dagger:hilt-android-compiler:2.44.2")
+    implementation("com.google.dagger:hilt-android:2.48")
+    ksp("androidx.hilt:hilt-compiler:1.1.0-alpha01")
+    ksp("com.google.dagger:hilt-compiler:2.48")
+    ksp("com.google.dagger:hilt-android-compiler:2.48")
 
     // Room
     implementation("androidx.room:room-runtime:2.5.2")
@@ -194,12 +208,16 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.5.0")
 
     // Other
-    implementation("com.google.code.gson:gson:2.9.0")
+    implementation("com.google.code.gson:gson:2.10")
     implementation("com.jakewharton.timber:timber:5.0.1")
     implementation("com.squareup.wire:wire-runtime:4.4.3")
     implementation("com.maxkeppeler.sheets-compose-dialogs:state:1.2.0")
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation("com.tbuonomo:dotsindicator:5.0")
+    implementation("com.github.omercemcicekli:CardStack:0.0.6")
+    implementation("com.github.marlonlom:timeago:4.0.3")
+    implementation("com.intuit.ssp:ssp-android:1.1.0")
+    implementation("com.intuit.sdp:sdp-android:1.1.0")
 
     implementation("commons-codec:commons-codec:1.16.0")
     implementation("commons-io:commons-io:2.11.0")
@@ -208,7 +226,7 @@ dependencies {
     testImplementation("org.json:json:20180813")
     testImplementation("com.google.truth:truth:1.1.5")
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.1")
     testImplementation("org.robolectric:robolectric:4.10.3")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
