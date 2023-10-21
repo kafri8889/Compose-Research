@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.anafthdev.composeresearch.research.base.MyScreen
+import com.anafthdev.composeresearch.research.common.FlippableCardScreen
 import com.anafthdev.composeresearch.ui.theme.ComposeResearchTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -16,12 +16,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ComposeResearchTheme {
+            ComposeResearchTheme(darkTheme = false) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MyScreen()
+                    FlippableCardScreen()
                 }
             }
         }
